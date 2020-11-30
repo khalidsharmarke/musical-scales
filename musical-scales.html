@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>
+        musical-scales
+    </title>
+    <script src="https://cdn.jsdelivr.net/npm/@tonaljs/tonal/browser/tonal.min.js"></script>
+    <script src='https://unpkg.com/vexflow/releases/vexflow-min.js'></script>
+</head>
+
+<body>
+    <div>
+        <form id="Form">
+            <label for="key">Key:</label>
+            <select id="key">
+                <option value="A">A</option>
+                <option value='B'>B</option>
+                <option value='C'>C</option>
+                <option value='D'>D</option>
+                <option value='E'>E</option>
+                <option value='F'>F</option>
+                <option value='G'>G</option>
+            </select>
+            <label for="scale-type">Scale Type</label>
+            <select id="scale-type">
+                <option value="major">major</option>
+                <option value="minor">minor</option>
+            </select>
+            </br><button type="submit">PRINT</button>
+        </form>
+    </div>
+    <div id="img_of_scales"></div>
+    <script>
+        document.getElementById('Form').addEventListener('submit', e => {
+            e.preventDefault()
+
+            while (document.getElementById('img_of_scales').firstChild) {
+                document.getElementById('img_of_scales').firstChild.remove()
+            }
+
+            const req_key = document.getElementById('key').value
+            const req_scale_type = document.getElementById('scale-type').value
+            const ret_scale = getScale(req_key, req_scale_type)
+            printScale(ret_scale)
+        })
+
+        function getScale(key, scale_type) {
+            return Tonal.Scale.get(`${key}4 ${scale_type}`).notes
+        }
+
+        function printScale(scale) {
+            const trans_scale = scale[0] + '/8'
+            scale.push(`${scale[0][0]}${Number(scale[0][1])+1}`)
+            scale.shift()
+            scale.unshift(trans_scale)
+            const scale_as_string = scale.join(', ')
+
+            const vf = new Vex.Flow.Factory({
+                renderer: {
+                    elementId: 'img_of_scales',
+                    width: 1000,
+                    height: 200
+                }
+            });
+
+            const score = vf.EasyScore();
+            const system = vf.System();
+
+            system.addStave({
+                voices: [
+                    score.voice(score.notes(scale_as_string, {
+                        stem: 'up'
+                    })),
+                ]
+            }).addClef('treble');
+
+            vf.draw();
+        }
+    </script>
+</body>
+
+</html>
