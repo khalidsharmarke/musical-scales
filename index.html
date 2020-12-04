@@ -21,7 +21,13 @@
                 <option value='E'>E</option>
                 <option value='F'>F</option>
                 <option value='G'>G</option>
-            </select>
+            </select><br>
+            <label for="sharp_flat">Sharp, Flat, or Natural</label>
+            <select id="sharp_flat">
+                <option value="">natural</option>
+                <option value="b">b</option>
+                <option value="#">#</option>
+            </select><br>
             <label for="scale-type">Scale Type</label>
             <select id="scale-type">
                 <option value="major">major</option>
@@ -35,47 +41,71 @@
         document.getElementById('Form').addEventListener('submit', e => {
             e.preventDefault()
 
-            while (document.getElementById('img_of_scales').firstChild) {
-                document.getElementById('img_of_scales').firstChild.remove()
+            const div = document.getElementById("img_of_scales")
+
+            while (div.firstChild) {
+                div.firstChild.remove()
             }
 
-            const req_key = document.getElementById('key').value
+            const req_key = document.getElementById('key').value + document.getElementById('sharp_flat').value
             const req_scale_type = document.getElementById('scale-type').value
             const ret_scale = getScale(req_key, req_scale_type)
-            printScale(ret_scale)
+            console.log(ret_scale)
+
+            const trans_scale = ret_scale.map(note => {
+                return note.slice(0, note.length - 1) + '/' + note[note.length - 1]
+            })
+
+            printScale(trans_scale, div, req_scale_type)
         })
 
         function getScale(key, scale_type) {
             return Tonal.Scale.get(`${key}4 ${scale_type}`).notes
         }
 
-        function printScale(scale) {
-            const trans_scale = scale[0] + '/8'
-            scale.push(`${scale[0][0]}${Number(scale[0][1])+1}`)
-            scale.shift()
-            scale.unshift(trans_scale)
-            const scale_as_string = scale.join(', ')
+        function printScale(scale, target, scale_type) {
+            const VF = Vex.Flow;
+            const time_Signature = {
+                num_beats: 7,
+                beat_value: 4
+            }
 
-            const vf = new Vex.Flow.Factory({
-                renderer: {
-                    elementId: 'img_of_scales',
-                    width: 1000,
-                    height: 200
-                }
-            });
+            let maj_min = ''
+            if (scale_type == 'minor') {
+                maj_min = 'm'
+            }
 
-            const score = vf.EasyScore();
-            const system = vf.System();
+            const renderer = new VF.Renderer(target, VF.Renderer.Backends.SVG);
+            renderer.resize(1000, 1000);
 
-            system.addStave({
-                voices: [
-                    score.voice(score.notes(scale_as_string, {
-                        stem: 'up'
-                    })),
-                ]
-            }).addClef('treble');
+            const context = renderer.getContext();
+            context.setFont("Arial", 10, "").setBackgroundFillStyle("#eed");
 
-            vf.draw();
+            const stave = new VF.Stave(10, 40, 510);
+            stave
+                .addClef("treble")
+                .addKeySignature(`${scale[0].slice(0, scale[0].indexOf('/')) + maj_min}`)
+                .addTimeSignature(`${time_Signature.num_beats}/${time_Signature.beat_value}`)
+
+            const notes = scale.map(note => {
+                return new VF.StaveNote({
+                    clef: 'treble',
+                    keys: [note],
+                    duration: 'q'
+                })
+            })
+
+            const voice = new VF.Voice(time_Signature);
+            voice.addTickables(notes);
+            var formatter = new VF.Formatter().joinVoices([voice]).format([voice], 400);
+            try {
+                voice.draw(context, stave);
+            } catch (e) {
+                alert('Bad Key')
+                return
+            }
+
+            stave.setContext(context).draw();
         }
     </script>
 </body>
